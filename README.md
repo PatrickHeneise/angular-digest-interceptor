@@ -19,6 +19,7 @@ Example
 -------
 ### client.js
 Login controller:
+
 		.controller('LoginFormCtrl', function ($scope, $http, localStorageService) {
 			$scope.submit = function () {
 				localStorageService.add('email', $scope.email);
@@ -36,10 +37,12 @@ Login controller:
 
 
 App config:
+
 		$httpProvider.interceptors.push('digestAuthInterceptor');
 
 
 ### server.js
+
 		passport.use(new DigestStrategy({
 				qop: 'auth',
 				realm: 'users@mydomain.com',
