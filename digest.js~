@@ -3,7 +3,7 @@
 angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
 
 .config(function ($locationProvider, $provide) {
-  $provide.factory('digestAuthInterceptor', function ($q, $injector, $location, localStorageService, md5) {
+  $provide.factory('digestAuthInterceptor', function ($q, $injector, $location, localStorageService) {
     return {
       responseError: function (rejection) {
         function genNonce(b) {
@@ -20,11 +20,6 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
         }
 
         if (rejection.status === 401) {
-          if (rejection.headers('www-authenticate') === null) {
-            console.err('MISSING WWW-AUTHENTICATE: Maybe CORS issue? Try adding "Header set Access-Control-Expose-Headers Cache-Control,Content-Type,WWW-Authenticate" to your .htaccess');
-            return $q.reject(rejection);
-          }
-
           var
             $http = $injector.get('$http'),
             email = localStorageService.get('email'),
@@ -56,10 +51,10 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               }
             });
 
-            HA1 = HA1 ? HA1 : md5.createHash(email + ':' + realm + ':' + password);
+            HA1 = HA1 ? HA1 : md5(email + ':' + realm + ':' + password);
             var
-              HA2 = md5.createHash(rejection.config.method + ':' + uri[1]),
-              response = md5.createHash(HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2),
+              HA2 = md5(rejection.config.method + ':' + uri[1]),
+              response = md5(HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2),
               header = 'Digest username="' + email + '", realm="' + realm +
                         '", nonce="' + nonce + '", uri="' + uri[1] +
                         '", cnonce="' + cnonce + '", nc="' + nc +

@@ -23,8 +23,5 @@
     "bower_components",
     "test",
     "tests"
-  ],
-  "dependencies": {
-    "angular-md5": "0.1.7"
-  }
+  ]
 }
