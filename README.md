@@ -5,10 +5,10 @@ Step-by-step
 ------------
 1. Client request (no authentication)
 2. Server responds with a 401 'Unauthorized' message, with realm and nonce in the X-WWW-Authenticate or WWW-Authenticate header
-2.1. Client checks if username and password are already provided, if not it redirects to /login
-3. Interceptor received the 401 response and generates authrozation header, based on realm, nonce, uri, algorithm, opaque, username/password stored in the LocalStorage
-4. Interceptor generates the original request with authorization headers and stores the hashed authrozation in the LocalStorage
-5. Server responds with 200 'Success' if the credentials are correct. Otherwise the interceptor clears the LocalStorage and redirects to /login.
+3. Client checks if username and password are already provided, if not it redirects to /login
+4. Interceptor received the 401 response and generates authrozation header, based on realm, nonce, uri, algorithm, opaque, username/password stored in the LocalStorage
+5. Interceptor generates the original request with authorization headers and stores the hashed authrozation in the LocalStorage
+6. Server responds with 200 'Success' if the credentials are correct. Otherwise the interceptor clears the LocalStorage and redirects to /login.
 
 
 Todo
