@@ -20,8 +20,12 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
         }
 
         if (rejection.status === 401) {
-          if (rejection.headers('www-authenticate') === null) {
-            console.err('MISSING WWW-AUTHENTICATE: Maybe CORS issue? Try adding "Header set Access-Control-Expose-Headers Cache-Control,Content-Type,WWW-Authenticate" to your .htaccess');
+          var authHeader = rejection.headers('www-authenticate');
+          if (rejection.headers('x-www-authenticate') != null) {
+            authHeader = rejection.headers('x-www-authenticate');
+          }
+
+          if (!authHeader) {
             return $q.reject(rejection);
           }
 
@@ -30,10 +34,10 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
             email = localStorageService.get('email'),
             password = localStorageService.get('password'),
             HA1 = localStorageService.get('authorization'),
-            cnonce = genNonce(10),
+            cnonce = genNonce(16),
             reg = /.+?\:\/\/.+?(\/.+?)(?:#|\?|$)/,
-            nc = 1,
-            nonce, realm, qop;
+            nc = '00000001',
+            nonce, realm, qop, opaque, algorithm;
 
           if ((email && password) || HA1) {
             var
@@ -41,8 +45,12 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               token = '(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2E\\x30-\\x39\\x3F\\x41-\\x5A\\x5E-\\x7A\\x7C\\x7E]+)',
               quotedString = '"(?:[\\x00-\\x0B\\x0D-\\x21\\x23-\\x5B\\\\x5D-\\x7F]|' + ws + '|\\\\[\\x00-\\x7F])*"',
               tokenizer = new RegExp(token + '(?:=(?:' + quotedString + '|' + token + '))?', 'g'),
-              tokens = rejection.headers('WWW-Authenticate').match(tokenizer),
+              tokens = authHeader.match(tokenizer),
               uri = reg.exec(rejection.config.url);
+
+            if (uri == null) {
+              uri = rejection.config.url;
+            }
 
             tokens.forEach(function (value) {
               if (value.match('nonce')) {
@@ -54,49 +62,68 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               if (value.match('qop')) {
                 qop   = unq(value.split('=')[1]);
               }
+              if (value.match('algorithm')) {
+                algorithm = unq(value.split('=')[1]);
+              }
+              if (value.match('opaque')) {
+                opaque = unq(value.split('=')[1]);
+              }
             });
 
-            HA1 = HA1 ? HA1 : md5.createHash(email + ':' + realm + ':' + password);
-            var
-              HA2 = md5.createHash(rejection.config.method + ':' + uri[1]),
-              response = md5.createHash(HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2),
-              header = 'Digest username="' + email + '", realm="' + realm +
-                        '", nonce="' + nonce + '", uri="' + uri[1] +
-                        '", cnonce="' + cnonce + '", nc="' + nc +
-                        '", qop="' + qop + '", response="' + response + '"';
+            // http://en.wikipedia.org/wiki/Digest_access_authentication
+            if (!HA1) {
+              HA1 = md5.createHash(email + ':' + realm + ':' + password);
+
+              if(algorithm == 'MD5-sess') {
+                HA1 = md5.createHash(HA1 + ':' + nonce + ':' + cnonce);
+              }
+            }
+
+            var HA2 = md5.createHash(rejection.config.method + ':' + uri);
+            if (qop == 'auth-int') {
+              entityBody = ""; //TODO: Implement
+              HA2 = md5.createHash(rejection.config.method + ':' + uri + ':' + md5.createHash(entityBody));
+            }
+
+            var response = md5.createHash(HA1 + ':' + nonce + ':' + HA2);
+            if (qop == 'auth' || qop == 'auth-int') {
+              response = md5.createHash(HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2);
+            }
+
+            var header = 'Digest username="' + email + '", realm="' + realm +
+                        '", nonce="' + nonce + '", uri="' + uri +
+                        '", algorithm=MD5, response="' + response +
+                        '", opaque="' + opaque + '", qop="' + qop +
+                        '", nc=' + nc + ', cnonce="' + cnonce + '"';
 
             $http.defaults.headers.common.authorization = header;
+
+            var deferredResponse = $q.defer();
+
+            var headers = rejection.config.headers;
+            headers.Authorization = header;
 
             $http({
               method: rejection.config.method,
               url: rejection.config.url,
               crossDomain: true,
               contentType : 'application/json',
-              headers: {
-                'Authorization': header
-              }
+              headers: headers,
+              transformRequest: rejection.config.transformRequest,
+              transformResponse: rejection.config.transformResponse
             })
-            .success(function () {
+            .success(function (data) {
               localStorageService.set('authorization', HA1);
               localStorageService.remove('password');
 
-              var nextUrl = $location.search();
-              if (nextUrl.next) {
-                $location.search('');
-                $location.path(nextUrl.next);
-              } else {
-                $location.path('/');
-              }
+              deferredResponse.resolve(data);
             })
             .error(function () {
+              deferredResponse.reject(rejection);
               localStorageService.clearAll();
-              if ($location.path() !== '/login') {
-                $location.search('next', $location.path());
-              }
-              $location.path('/login');
             });
-          } else {
-            $location.path('/login');
+
+            return deferredResponse.promise;
           }
         }
         return $q.reject(rejection);
