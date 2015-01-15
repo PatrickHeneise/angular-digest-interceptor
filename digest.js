@@ -153,6 +153,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
             .error(function () {
               deferredResponse.reject(rejection);
               localStorageService.clearAll();
+              $location.path('/login');
             });
 
             return deferredResponse.promise;
