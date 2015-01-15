@@ -15,6 +15,7 @@ Todo
 ----
 - Allow for custom authentication headers
 - Allow for configuration of default username and password (interesting for automatic API authentication)
+- Create callback for unsuccessfull authentication ($location.path('/login'), $state.go('login'), etc.)
 - Implement "auth-int"
 - Fix/Clean up URI handling
 - Include dependencies automatically somehow

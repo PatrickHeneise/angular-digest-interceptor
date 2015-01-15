@@ -112,11 +112,11 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               transformRequest: rejection.config.transformRequest,
               transformResponse: rejection.config.transformResponse
             })
-            .success(function (data) {
+            .success(function (data, status, headers, config) {
               localStorageService.set('authorization', HA1);
               localStorageService.remove('password');
 
-              deferredResponse.resolve(data);
+              deferredResponse.resolve({data: data, status: status, headers: headers, config: config});
             })
             .error(function () {
               deferredResponse.reject(rejection);
