@@ -11,7 +11,7 @@ angular.module('exampleApp')
 
   .controller('LoginFormCtrl', function ($scope, $http, localStorageService) {
 		$scope.submit = function () {
-			localStorageService.add('email', $scope.email);
+			localStorageService.add('username', $scope.username);
 			localStorageService.add('password', $scope.password);
 
 			$http.post('http://127.0.0.1:3000/api/login', {

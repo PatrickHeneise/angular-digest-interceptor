@@ -31,7 +31,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
 
           var
             $http = $injector.get('$http'),
-            email = localStorageService.get('email'),
+            username = localStorageService.get('username'),
             password = localStorageService.get('password'),
             HA1 = localStorageService.get('authorization'),
             cnonce = genNonce(16),
@@ -39,7 +39,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
             nc = '00000001',
             nonce, realm, qop, opaque, algorithm;
 
-          if ((email && password) || HA1) {
+          if ((username && password) || HA1) {
             var
               ws = '(?:(?:\\r\\n)?[ \\t])+',
               token = '(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2E\\x30-\\x39\\x3F\\x41-\\x5A\\x5E-\\x7A\\x7C\\x7E]+)',
@@ -72,7 +72,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
 
             // http://en.wikipedia.org/wiki/Digest_access_authentication
             if (!HA1) {
-              HA1 = md5.createHash(email + ':' + realm + ':' + password);
+              HA1 = md5.createHash(username + ':' + realm + ':' + password);
 
               if(algorithm == 'MD5-sess') {
                 HA1 = md5.createHash(HA1 + ':' + nonce + ':' + cnonce);
@@ -90,7 +90,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               response = md5.createHash(HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2);
             }
 
-            var header = 'Digest username="' + email + '", realm="' + realm +
+            var header = 'Digest username="' + username + '", realm="' + realm +
                         '", nonce="' + nonce + '", uri="' + uri +
                         '", algorithm=MD5, response="' + response +
                         '", opaque="' + opaque + '", qop="' + qop +
@@ -124,6 +124,8 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
             });
 
             return deferredResponse.promise;
+          } else {
+            $location.path('/login');
           }
         }
         return $q.reject(rejection);

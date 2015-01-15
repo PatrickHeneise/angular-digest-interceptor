@@ -2,6 +2,7 @@
 
 angular.module('exampleApp', [
     'ngRoute',
+    'angular-md5',
     'LocalStorageModule',
     'DigestAuthInterceptor',
   ])
