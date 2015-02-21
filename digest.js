@@ -4,7 +4,15 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
 
 .config(function ($locationProvider, $provide) {
   $provide.factory('digestAuthInterceptor', function ($q, $injector, $location, localStorageService, md5) {
-    function createHeader(method, url) {
+
+    /* private values */
+    var authHeader = null
+      , username = localStorageService.get('username')
+      , password = localStorageService.get('password')
+      , HA1 = null
+      ;
+
+    var createHeader = function(method, url) {
       function genNonce(b) {
         var c = [],
           e = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
@@ -17,11 +25,6 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
       function unq(quotedString) {
         return quotedString.substr(1, quotedString.length - 2).replace(/(?:(?:\r\n)?[ \t])+/g, ' ');
       }
-
-      var username = localStorageService.get('username'),
-          password = localStorageService.get('password'),
-          HA1 = localStorageService.get('authorization'),
-          authHeader = localStorageService.get('authHeader');
 
       if(!angular.isDefined(authHeader) || authHeader == null) {
         return null;
@@ -95,23 +98,41 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
           '", nc=' + nc + ', cnonce="' + cnonce + '"';
     }
 
-    return {
+    var digest = {
+      failedQueue: {},
+
       request: function(config) {
         var header = createHeader(config.method, config.url);
         if (header) {
-          config.headers.Authorization = header;
+          config.headers.authorization = header;
         }
 
         return config;
       },
 
       responseError: function (rejection) {
+        if (rejection.status === 400) {
+          if (angular.isDefined(rejection.config.headers.authorization)) {
+            rejection.status = 401;
+            authHeader = null;
+          }
+        }
+
         if (rejection.status === 401 ) {
-          if (angular.isDefined(rejection.config.headers.Authorization)) {
+          if (angular.isDefined(rejection.config.headers.authorization)) {
+            if(!angular.isDefined(digest.failedQueue[rejection.config.url])){
+              digest.failedQueue[rejection.config.url] = -1;
+            }
+
+            digest.failedQueue[rejection.config.url] = digest.failedQueue[rejection.config.url] + 1;
+          }
+
+          if (digest.failedQueue[rejection.config.url] === 5) {
+            delete digest.failedQueue[rejection.config.url];
             return $q.reject(rejection);
           }
 
-          var authHeader = rejection.headers('www-authenticate');
+          authHeader = rejection.headers('www-authenticate');
           if (rejection.headers('x-www-authenticate') != null) {
             authHeader = rejection.headers('x-www-authenticate');
           }
@@ -120,24 +141,20 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
             return $q.reject(rejection);
           }
 
-          localStorageService.set('authHeader', authHeader);
-
           var
-            $http = $injector.get('$http'),
-            username = localStorageService.get('username'),
-            password = localStorageService.get('password'),
-            HA1 = localStorageService.get('authorization');
+            $http = $injector.get('$http');
 
           if ((username && password) || HA1) {
             var header = createHeader(rejection.config.method, rejection.config.url);
             var deferredResponse = $q.defer();
 
             $http.defaults.headers.common.authorization = header;
-            rejection.config.headers.Authorization = header;
+            rejection.config.headers.authorization = header;
 
             $http({
               method: rejection.config.method,
               url: rejection.config.url,
+              data: rejection.config.data,
               crossDomain: true,
               contentType : 'application/json',
               headers: rejection.config.headers,
@@ -145,15 +162,14 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
               transformResponse: rejection.config.transformResponse
             })
             .success(function (data, status, headers, config) {
-              localStorageService.set('authorization', HA1);
-              localStorageService.remove('password');
+              password = null;
 
               deferredResponse.resolve({data: data, status: status, headers: headers, config: config});
             })
             .error(function () {
+              HA1 = null;
+
               deferredResponse.reject(rejection);
-              localStorageService.clearAll();
-              $location.path('/login');
             });
 
             return deferredResponse.promise;
@@ -165,5 +181,7 @@ angular.module('DigestAuthInterceptor', ['LocalStorageModule'])
         return $q.reject(rejection);
       }
     };
+
+    return digest;
   });
 });
