@@ -1,6 +1,6 @@
 {
   "name": "angular-digest-interceptor",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "homepage": "https://github.com/PatrickHeneise/angular-digest-interceptor.git",
   "authors": [
     "Patrick Heneise <mail@patrickheneise.com>",
