@@ -2,10 +2,12 @@
 
 angular.module('exampleApp', [
     'ngRoute',
-    'angular-md5',
     'LocalStorageModule',
     'DigestAuthInterceptor',
   ])
+  .config(['digestAuthInterceptorProvider', function(digestAuthInterceptorProvider) {
+    digestAuthInterceptorProvider.setCredentialsInvalidPath('/login');
+  }])
   .config(function ($routeProvider, $httpProvider) {
     $routeProvider
       .when('/', {
