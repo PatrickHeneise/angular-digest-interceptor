@@ -140,7 +140,7 @@ function DigestAuthInterceptor(initialUsername, initialPassword, maximumRetries,
 			deferredResponse.reject(httpReject);
 		});
 		
-		return deferredResponse;
+		return deferredResponse.promise;
 	}
 	
 	// private helper
