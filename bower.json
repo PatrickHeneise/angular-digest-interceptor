@@ -1,9 +1,10 @@
 {
   "name": "angular-digest-interceptor",
-  "version": "0.0.1",
+  "version": "0.0.7",
   "homepage": "https://github.com/PatrickHeneise/angular-digest-interceptor.git",
   "authors": [
-    "Patrick Heneise <mail@patrickheneise.com>"
+    "Patrick Heneise <mail@patrickheneise.com>",
+    "Marc Harnos <mharnos@gmail.com>"
   ],
   "description": "AngularJS Digest Authentication Interceptor",
   "main": "digest.js",
@@ -23,5 +24,8 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "angular-md5": "*"
+  }
 }
