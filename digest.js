@@ -229,7 +229,7 @@ function DigestAuthInterceptor(initialUsername, initialPassword, maximumRetries,
 		}
 		
 		function unq(value) {
-			var quotedString = value.split('=')[1];
+			var quotedString = getRHSValue(value);
 			return quotedString.substr(1, quotedString.length - 2).replace(/(?:(?:\r\n)?[ \t])+/g, ' ');
 		}
 		
@@ -250,5 +250,9 @@ function DigestAuthInterceptor(initialUsername, initialPassword, maximumRetries,
 			
 			return intermediateArray.join(', ');
 		}
+	}
+
+	function getRHSValue(someString) {
+		someString.substr(someString.indexOf('='));
 	}
 }
