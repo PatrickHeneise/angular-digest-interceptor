@@ -253,6 +253,6 @@ function DigestAuthInterceptor(initialUsername, initialPassword, maximumRetries,
 	}
 
 	function getRHSValue(someString) {
-		someString.substr(someString.indexOf('='));
+		return someString.substr(someString.indexOf('='));
 	}
 }
